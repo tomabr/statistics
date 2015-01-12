@@ -1,0 +1,642 @@
+<!DOCTYPE html>  
+<html lang="en" ng-app="myApp">  
+    <head>
+    	<style>
+    		body,div,ol{
+    			margin:0;
+    			padding:0;
+    			overflow-x: hidden;
+    			font-family: arial,helvetica;
+    		}
+
+    		body{
+    			background:#e6e6e6;
+    		}
+
+    		div{
+    			background: #fff;
+    			overflow: hidden;
+    		}
+
+    	
+
+    		div.wrap{
+    			width: 96%;
+    		 	background:#fff;
+    		 	margin: 1% auto 0;
+    		 	border: 1px solid gray;
+    		 	overflow: auto;
+    		}
+
+            div.toleft{
+                width: 50%;
+                float: left;
+            }
+    			
+
+    		h1{
+    			font-size: 1.4em;
+    			margin-left: 2%;
+    		}
+
+            h2{
+                font-size: 1em;
+                margin-left: 2%;
+            }
+
+
+           .charts-custom-button-collapse-left{
+            float:right;
+           }
+
+           .google-visualization-table-div-page{
+            display: table;
+            margin: 0 auto!important;
+           }
+
+            select {
+                padding:3px;
+                margin: 29px auto;
+                -webkit-border-radius:4px;
+                -moz-border-radius:4px;
+                border-radius:4px;
+                -webkit-box-shadow: 0 3px 0 #ccc, 0 -1px #fff inset;
+                -moz-box-shadow: 0 3px 0 #ccc, 0 -1px #fff inset;
+                box-shadow: 0 3px 0 #ccc, 0 -1px #fff inset;
+                background: #f8f8f8;
+                outline:none;
+                display: inline-block;
+                -webkit-appearance:none;
+                -moz-appearance:none;
+                appearance:none;
+                cursor:pointer;
+            }
+
+            /* Targetting Webkit browsers only. FF will show the dropdown arrow with so much padding. */
+            @media screen and (-webkit-min-device-pixel-ratio:0) {
+                select {padding-right:18px}
+            }
+
+            div.wrapSelect {position:relative; display: inline-block; margin: 0 20px;}
+            div.wrapSelect:after {
+                content:'<>';
+                font:11px "Consolas", monospace;
+                -webkit-transform:rotate(90deg);
+                -moz-transform:rotate(90deg);
+                -ms-transform:rotate(90deg);
+                transform:rotate(90deg);
+                right:6px; top:35px;
+                padding:0 0 2px;
+                border-bottom:1px solid;
+                position:absolute;
+                pointer-events:none;
+            }
+            div.wrapSelect:before {
+                content:'';
+                right:6px; top:30px;
+                width:20px; height:20px;
+                background:#f8f8f8;
+                position:absolute;
+                pointer-events:none;
+                display:block;
+            }
+
+            table tr td:first-child{
+                width: 5%;
+                text-align: center;
+            }
+
+            table tr td:last-child{
+                width:80%;
+            }
+    	
+    	</style>
+         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
+         
+         <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+		
+		<script>
+		
+		var app = app || angular.module('myApp', []);
+			
+			
+			
+		app.factory('ChartService', function() {
+    return {
+        
+        /**
+         * Loads the visualization module from the Google Charts API 
+         * if available
+         * @returns {boolean} - Returns true is successful, or false 
+         * if not available
+         */
+        loadGoogleVisualization: function() {
+            
+            // Using a try/catch block to guard against unanticipated 
+            // errors when loading the visualization lib
+            try {
+
+                // Arbitrary callback required in google.load() to 
+                // support loading after initial page rendering
+                google.load('visualization', '1', {
+                    'callback':'console.log(\'success\');', 
+                    'packages':['corechart', 'table']
+                });
+               
+                return true;
+            
+            } catch(e) {
+                console.log('Could not load Google lib', e);
+                return false;  
+            }
+
+        }
+    };
+});
+			
+			
+		
+			
+			
+
+		app.controller('ChartCtrl', function($scope, $http, ChartService) {
+
+			// activateChart flips to true once the Google 
+			// Loader callback fires
+			$scope.activateChart = false;
+
+			// This is where my data model will be stored.
+			// "visual" will contain the chart's datatable
+			$scope.dataModel = {
+                visual: {},
+                metaData: {},
+                data: {}
+
+                };
+
+            $scope.columnModel = {
+                visual: {},
+                metaData: {},
+                data: {}
+            };
+
+            $scope.columnModel2 = {
+                visual: {},
+                metaData: {},
+                data: {}
+            };
+
+             $scope.columnModel3 = {
+                visual: {},
+                metaData: {},
+                data: {}
+            };
+
+			
+           var change='';
+			 $scope.$watch('selectChoise', function(value) {
+             $scope[change]=false;
+
+             console.log(value);
+             $scope[value] = true;
+             change=value;
+             });
+             
+		
+			// First, we attempt to load the Visualization module 
+			var loadGoogle = ChartService.loadGoogleVisualization();
+
+			// If the Google Loader request was made with no errors, 
+			// register a callback, and construct the chart data
+			// model within the callback function
+			if (loadGoogle) {
+
+				
+				
+				
+				google.setOnLoadCallback(function() {
+					
+					var responsePromise = $http.get("https://api.github.com/users/x-formation/repos");
+					responsePromise.success(function(data, status, headers, config) {
+						$scope.repositories=[];
+						$scope.repositories = angular.fromJson(data);
+                        $scope.success = true;
+
+				        
+                       
+                        //owner to main table 
+                       for(i=0; i<$scope.repositories.length;i++){
+                           $scope.dataModel[i] = {
+                                visual: {},
+                                metaData: {},
+                                data: {}
+                            };
+
+
+                           var arr=[];
+                           var arr  = $scope.repositories[i].owner;
+
+                           function replaceFromDate(param){
+                                var pattern = /_/gi;
+                                return param.replace(pattern," ");
+                           }
+
+                           for (j in arr){   
+                             $scope.repositories[i][j]=arr[j];
+                           }
+                           delete $scope.repositories[i]["owner"];
+
+                           $scope.dataModel[i].visual["dataTable"] = new google.visualization.DataTable();
+                           var dataTable = $scope.dataModel[i].visual.dataTable;
+                            // Set up the dataTable and columns
+                           dataTable.addColumn("string","Proparties");
+                           dataTable.addColumn("string","Value");
+                            
+                            var pattern2 = /^https:\/\/[0-9A-Za-z._\?\=\/\-\/]*$/;
+                            for(j in $scope.repositories[i]){
+                                value = $scope.repositories[i][j] + "";
+                                j=replaceFromDate(j);
+                                value=value.replace(pattern2, '<a target="_blank" href="' + value + '">' + value + "</a>");
+                                dataTable.addRow([j, value]);
+                            }
+                        }
+
+
+                        $scope.columnModel.visual.dataTable = new google.visualization.DataTable();
+                        var columnTable = $scope.columnModel.visual.dataTable;
+                        columnTable.addColumn("string","Name of project");
+                        columnTable.addColumn("number","Size");
+                       
+
+
+                        $scope.columnModel2.visual.dataTable = new google.visualization.DataTable();
+                        var columnTable2 = $scope.columnModel2.visual.dataTable;
+                        columnTable2.addColumn("string","Name of project");
+                        columnTable2.addColumn("number","Size");
+                     
+
+                         $scope.columnModel3.visual.dataTable = new google.visualization.DataTable();
+                        var columnTable3 = $scope.columnModel3.visual.dataTable;
+                        columnTable3.addColumn("string","Name of project");
+                        columnTable3.addColumn("number","Size");
+                         for(i=0; i<$scope.repositories.length;i++){
+                            j=replaceFromDate($scope.repositories[i].name);
+                             columnTable.addRow([j, $scope.repositories[i].size/100]);
+                            columnTable3.addRow([j, $scope.repositories[i].watchers]);
+                             columnTable2.addRow([j, $scope.repositories[i].forks]);
+                         }
+
+
+
+        				$scope.activateChart = true;   
+
+					
+					});
+
+					responsePromise.error(function(data, status, headers, config) {
+						alert("AJAX failed!");
+					});
+					
+			
+					
+
+				});  
+			}
+		});
+			
+			
+app.directive("googleChart",function($window){  
+    return{
+        restrict : "A",
+		
+        link: function($scope, $elem, $attr){
+            var model;
+
+          
+            // Function to run when the trigger is activated
+            var initChart = function() {
+
+                // Run $eval on the $scope model passed 
+                // as an HTML attribute
+                model = $scope.$eval($attr.ngModel);
+                
+                // If the model is defined on the scope,
+                // grab the dataTable that was set up
+                // during the Google Loader callback
+                // function, and draw the chart
+                if (model) {
+					
+                    var dt = model.dataTable,
+                         options = {
+								   width: parseInt(window.innerWidth),
+								   showRowNumber: true,
+								   page: 'enable',
+								   pageSize: 10,
+                                   height: 280,
+                                   allowHtml:true,
+                                   sort: "disable"
+								  },
+                        chartType = $attr.googleChart;
+
+                        $scope.dt = dt;
+                        $scope.chartType = chartType;
+
+                   
+                    googleChart = new google.visualization[chartType]($elem[0]);
+                    googleChart.draw(dt,options);
+               
+                    angular.element($window).on('resize', function () {
+                        googleChart = new google.visualization[chartType]($elem[0]);
+                        options.width = parseInt(window.innerWidth);
+                        googleChart.draw(dt,options);
+                    });
+
+                }
+            };
+
+            // Watch the scope value placed on the trigger attribute
+            // if it ever flips to true, activate the chart
+            $scope.$watch($attr.trigger, function(val){
+               // console.log(val);
+                if (val === true) {
+                    initChart(); 
+                }
+            });
+            
+        },
+        
+    }
+});
+	
+
+app.directive("googleChart4",function($window){  
+    return{
+        restrict : "A",
+        
+        link: function($scope, $elem, $attr){
+            var model;
+
+            // Function to run when the trigger is activated
+            var initChart = function() {
+
+                // Run $eval on the $scope model passed 
+                // as an HTML attribute
+                model = $scope.$eval($attr.ngModel);
+
+
+
+             
+                
+                // If the model is defined on the scope,
+                // grab the dataTable that was set up
+                // during the Google Loader callback
+                // function, and draw the chart'
+
+                if (model) {
+                    
+                    var dt = model.dataTable,
+                        options = {title: "Size of project",
+                                   width: parseInt(window.innerWidth),
+                                   height: 300,
+                                    legend: {
+                                        position: "none"
+                                    },
+                               
+                                   vAxis: {
+                                      viewWindowMode:'explicit',
+                                      gridlines: {"count": 9},
+                                      viewWindow:{
+                                        max:16,
+                                        min:0
+                                      },
+                                      format: '##MB'
+                                    }, 
+                                  },
+                        chartType = $attr.googleChart4;
+                        console.log(chartType);
+
+                    if (model.title) {
+                        options.title = model.title;
+                    }
+                    
+                    
+
+                    dt.sort([{column: 1, desc:true}, {column: 0}]);
+                    var googleChart = new google.visualization[chartType]($elem[0]);
+
+                    googleChart.draw(dt,options);
+
+
+                      angular.element($window).on('resize', function () {
+                        options.width = parseInt(window.innerWidth);
+                      googleChart.draw(dt,options);
+                    });
+                }
+            };
+
+            // Watch the scope value placed on the trigger attribute
+            // if it ever flips to true, activate the chart
+            $scope.$watch($attr.trigger, function(val){
+                if (val === true) {
+                    initChart(); 
+                }
+            });
+            
+        }
+    }
+});  
+     
+
+app.directive("googleChart5",function($window){  
+    return{
+        restrict : "A",
+        
+        link: function($scope, $elem, $attr){
+            var model;
+
+            // Function to run when the trigger is activated
+            var initChart = function() {
+
+                // Run $eval on the $scope model passed 
+                // as an HTML attribute
+                model = $scope.$eval($attr.ngModel);
+
+
+
+             
+                
+                // If the model is defined on the scope,
+                // grab the dataTable that was set up
+                // during the Google Loader callback
+                // function, and draw the chart'
+
+                if (model) {
+                    
+                    var dt = model.dataTable,
+                        options = {title: "Amount of forks",
+                                   width: parseInt(window.innerWidth/2),
+                                   height: 300,
+                                    legend: {
+                                        position: "none"
+                                    },
+                               
+                                   vAxis: {
+                                      viewWindowMode:'explicit',
+                                      gridlines: {"count": 5},
+                                      viewWindow:{
+                                        max:5,
+                                        min:0
+                                      },
+                                      format: ' '
+                                    }, 
+                                  },
+                        chartType = $attr.googleChart5;
+                        console.log(chartType);
+
+                    if (model.title) {
+                        options.title = model.title;
+                    }
+                    
+                    
+
+                    dt.sort([{column: 1, desc:true}, {column: 0}]);
+                    var googleChart = new google.visualization[chartType]($elem[0]);
+
+                    googleChart.draw(dt,options);
+
+
+                      angular.element($window).on('resize', function () {
+                        options.width = parseInt(window.innerWidth/2);
+                      googleChart.draw(dt,options);
+                    });
+                }
+            };
+
+            // Watch the scope value placed on the trigger attribute
+            // if it ever flips to true, activate the chart
+            $scope.$watch($attr.trigger, function(val){
+                if (val === true) {
+                    initChart(); 
+                }
+            });
+            
+        }
+    }
+});      
+
+
+app.directive("googleChart6",function($window){  
+    return{
+        restrict : "A",
+        
+        link: function($scope, $elem, $attr){
+            var model;
+
+            // Function to run when the trigger is activated
+            var initChart = function() {
+
+                // Run $eval on the $scope model passed 
+                // as an HTML attribute
+                model = $scope.$eval($attr.ngModel);
+
+
+
+             
+                
+                // If the model is defined on the scope,
+                // grab the dataTable that was set up
+                // during the Google Loader callback
+                // function, and draw the chart'
+
+                if (model) {
+                    
+                    var dt = model.dataTable,
+                        options = {title: "Amount of watchers",
+                                   width: parseInt(window.innerWidth/2),
+                                   height: 300,
+                                    legend: {
+                                        position: "none"
+                                    },
+                               
+                                   vAxis: {
+                                      viewWindowMode:'explicit',
+                                      gridlines: {"count": 5},
+                                      viewWindow:{
+                                        max:5,
+                                        min:0
+                                      },
+                                      format: ' '
+                                    }, 
+                                  },
+                        chartType = $attr.googleChart6;
+                        console.log(chartType);
+
+                    if (model.title) {
+                        options.title = model.title;
+                    }
+                    
+                    
+
+                    dt.sort([{column: 1,desc:true}, {column: 0}]);
+                    var googleChart = new google.visualization[chartType]($elem[0]);
+
+                    googleChart.draw(dt,options);
+
+
+                      angular.element($window).on('resize', function () {
+                        options.width = parseInt(window.innerWidth/2);
+                      googleChart.draw(dt,options);
+                    });
+                }
+            };
+
+            // Watch the scope value placed on the trigger attribute
+            // if it ever flips to true, activate the chart
+            $scope.$watch($attr.trigger, function(val){
+                if (val === true) {
+                    initChart(); 
+                }
+            });
+            
+        }
+    }
+});  
+            
+		</script>
+    </head>
+    <body ng-controller="ChartCtrl">
+
+             
+  
+            <div class="wrap">
+                <h1>Top Contribution Date</h1>
+  
+
+                <div google-chart4="ColumnChart" ng-model="columnModel.visual" trigger="activateChart"></div>
+                <div class="toleft" google-chart5="ColumnChart" ng-model="columnModel2.visual" trigger="activateChart"></div>
+                <div class="toleft" google-chart6="ColumnChart" ng-model="columnModel3.visual" trigger="activateChart"></div>
+
+               
+            
+            <div class="wrapSelect">
+                <select ng-model="selectChoise" ng-show="success">
+                    <option value="">-- Select your project --</option>
+                    <option value="{{item.name}}" ng-repeat="item in repositories">{{item.name}}</option>    
+                 </select>
+             </div>
+                 
+               
+               <div ng-repeat="item in repositories">
+                    <div ng-show="{{item.name}}">
+                     <h2>{{item.name}}</h2>
+                    <div google-chart="Table" ng-model="dataModel[$index].visual" trigger="activateChart" ></div>
+                    </div>
+              </div>
+            
+                
+            
+
+
+         </div>
+    </body>
+</html> 
